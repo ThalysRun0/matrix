@@ -23,7 +23,7 @@ IFACES = ['enp6s0', 'wlp5s0']
 BUFFER_SIZE = 1000
 
 GLYPHS = (
-    glyphes.languages["hiragana"] + 
+    # glyphes.languages["hiragana"] + 
     glyphes.languages["ascii"] + 
     glyphes.languages["katakana"] + 
     # glyphes.languages["korean"] +
@@ -37,8 +37,9 @@ GLYPHS = (
 #%%
 
 MAX_FLOW_LENGTH = 30
-SCREEN_WIDTH = 350 # 800
-SCREEN_HEIGHT = 850
+# SCREEN_WIDTH = 350 # 800
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 350
 FONT_SIZE = 18
 GRID_SEP = 1
 
@@ -46,7 +47,7 @@ cell_width = FONT_SIZE + GRID_SEP  # 20
 num_cols = SCREEN_WIDTH // cell_width  # division entière
 offset = ((SCREEN_WIDTH - (num_cols * cell_width)) // 2)
 x_positions = [offset + (i * cell_width) for i in range(num_cols)]
-MAX_STREAMS = len(x_positions) * 10
+MAX_STREAMS = len(x_positions) * 3
 num_rows = (SCREEN_HEIGHT + MAX_FLOW_LENGTH) // cell_width
 y_positions = [(i-1) * cell_width for i in range(num_rows+MAX_FLOW_LENGTH)]
 y_positions
@@ -111,8 +112,10 @@ class Dot:
         self.head_color = (255, 255, 255)
         self.render_color = self.head_color
         self.intensity = 255 if intensity is None else intensity
-        self.fade_duration = 3.0
-        self.elapsed = 0.0
+        self.fade_duration = 1.8
+        self.fade_elapsed = 0.0
+        self.switch_duration = 3.0
+        self.switch_elapsed = 0.0
 
         self.render(color=self.head_color)
 
@@ -122,18 +125,23 @@ class Dot:
         self.color = self.color if color is None else color
         self.render_color = self.head_color if color is None else color
         self.intensity = 255
-        self.elapsed = 0.0
+        self.fade_elapsed = 0.0
 
         self.render(color=self.head_color)
 
     def update(self, dt, glyph: str | None = None, speed: float | None = None, color: tuple[int, int, int] | None = None, intensity: int | None = None):
-        self.elapsed += dt
+        self.switch_elapsed += dt
+        self.fade_elapsed += dt
         self.glyph = self.glyph if glyph is None else glyph
         self.speed = self.speed if speed is None else speed
         self.color = self.color if color is None else color
-        # self.intensity = self.intensity if intensity is None else intensity
-        progress = min(self.elapsed / self.fade_duration, 1.0)
+        self.intensity = self.intensity if intensity is None else intensity
+        progress = min(self.fade_elapsed / self.fade_duration, 1.0)
         self.intensity = int(255 * (1.0 - progress))
+
+        if self.switch_elapsed >= random.uniform(self.switch_duration, self.switch_duration * self.speed):
+            self.glyph = random.choice(GLYPHS)
+            self.switch_elapsed = 0.0
 
         self.render()
 
@@ -150,11 +158,8 @@ class Dot:
         _color = (*self.render_color, self.intensity)
         self.surface = renderer.render_char(self.glyph, _color).copy()
         _tint = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
-        try:
-            _tint.fill(_color)
-            self.surface.blit(_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-        except:
-            print(self.render_color)
+        _tint.fill(_color)
+        self.surface.blit(_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
 
 #%%
@@ -208,12 +213,12 @@ class Flow:
 # ---------- Font ----------
 # IMPORTANT : utiliser une police qui supporte hiragana
 font_paths = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    "./fonts/DejaVuSans.ttf",
+    "./fonts/NotoSans-Regular.ttf",
     # "/usr/share/fonts/opentype/noto/NotoSansJP-Regular.ttf",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf",
+    "./fonts/NotoSansCJK-Bold.ttc",
+    "./fonts/NotoSansArabic-Regular.ttf",
+    "./fonts/NotoSansHebrew-Regular.ttf",
 ]
 
 # ---------- Init ----------
@@ -258,13 +263,13 @@ def aggregator():
                     if len(flows) < MAX_STREAMS:
                         flows[new_key] = Flow(new_key)
                         # if DEBUG:
-                        print(f"captured({len(flows)}) : {flows[new_key].speed} | {new_key[5]}{' '*50}", end="\r")
+                        print(f"captured({len(flows)}/{MAX_STREAMS}) : {flows[new_key].speed} | {new_key[5]}{' '*50}", end="\r")
                 #     else:
                 #         if DEBUG:
                 #             print(f"max({len(flows)})", end="\r")
                 else:
                     if DEBUG:
-                        print(f"refused({len(flows)}) : {new_key}{' '*50}", end="\r")
+                        print(f"refused({len(flows)}/{MAX_STREAMS}) : {new_key}{' '*50}", end="\r")
 
         except queue.Empty:
             continue
@@ -342,7 +347,7 @@ def render():
                 if flows[key].raise_destroy_event:
                     flows.pop(key)
                     if DEBUG:
-                        print(f"destroyed({len(flows)}) : {key}{' '*50}", end="\r")
+                        print(f"destroyed({len(flows)}/{MAX_STREAMS}) : {key}{' '*50}", end="\r")
                     continue
 
                 flow_dot: Dot = dots[(current_flow.x, current_flow.y)]
