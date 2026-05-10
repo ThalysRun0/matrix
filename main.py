@@ -40,8 +40,8 @@ GLYPHS = (
 
 MAX_FLOW_LENGTH = 30
 # SCREEN_WIDTH = 350 # 800
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 350
+SCREEN_WIDTH = 1920 // 5
+SCREEN_HEIGHT = (1080 // 3) * 2 
 FONT_SIZE = 18
 GRID_SEP = 1
 
@@ -309,7 +309,7 @@ def stdin_reader():
 
 #%%
 def render():
-    PAUSED = DEBUG
+    PAUSED = False
     running = True
     while running:
 
@@ -366,12 +366,12 @@ def render():
                 debug_key = list(flows.keys())[0]
                 debug_flow: Flow = flows[debug_key]
                 surface = renderer.render_text(f"FLOW({debug_flow.x}, {debug_flow.y}): '{debug_flow.glyphs[0]}' | {debug_flow.key}")
-                screen.blit(surface, (10, (FONT_SIZE*30)))
+                screen.blit(surface, (10, (FONT_SIZE*1)))
 
                 # debug_dot = dots[(debug_flow.x, debug_flow.y)]
                 debug_dot = dots[(x_positions[0], y_positions[0])]
                 surface = renderer.render_text(f"DOT({debug_dot.x}, {debug_dot.y}): '{debug_dot.glyph}' | {debug_dot.intensity}")
-                screen.blit(surface, (10, (FONT_SIZE*31)))
+                screen.blit(surface, (10, (FONT_SIZE*2)))
 
         pygame.display.flip()
 
