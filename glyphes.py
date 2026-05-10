@@ -11,7 +11,7 @@ languages["digits"] = (
 
 # Symbols
 languages["symbols"] = (
-    unicode_range(0x0020, 0x002F) +
+    unicode_range(0x0021, 0x002F) +
     unicode_range(0x003A, 0x0040) +
     unicode_range(0x005B, 0x0060) +
     unicode_range(0x007B, 0x007E)
@@ -63,9 +63,10 @@ languages["korean"] = (
 )
 
 # # %% exemple d'usage
-# source = languages["symbols"]
-# source_pairs = [(f"{ord(c):#06x}", c) for c in source]
-# source_pairs
+source = languages["symbols"]
+source_pairs = [(f"{ord(c):#06x}", c) for c in source]
+source_pairs
+
 
 # # %%
 

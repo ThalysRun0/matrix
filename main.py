@@ -24,9 +24,11 @@ BUFFER_SIZE = 1000
 
 GLYPHS = (
     # glyphes.languages["hiragana"] + 
-    glyphes.languages["ascii"] + 
+    # glyphes.languages["ascii"] + 
     glyphes.languages["katakana"] + 
     # glyphes.languages["korean"] +
+    # glyphes.languages["arabic"] +
+    # glyphes.languages["cyrillic"] +
     # glyphes.languages["hebrew"] +
     # glyphes.languages["ascii"] + 
     glyphes.languages["symbols"] +
@@ -215,7 +217,7 @@ class Flow:
 font_paths = [
     "./fonts/DejaVuSans.ttf",
     "./fonts/NotoSans-Regular.ttf",
-    # "/usr/share/fonts/opentype/noto/NotoSansJP-Regular.ttf",
+    # "./fonts/NotoSansJP-Regular.ttf",
     "./fonts/NotoSansCJK-Bold.ttc",
     "./fonts/NotoSansArabic-Regular.ttf",
     "./fonts/NotoSansHebrew-Regular.ttf",
