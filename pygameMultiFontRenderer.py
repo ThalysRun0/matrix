@@ -58,7 +58,7 @@ class MultiFontRenderer:
                 return self.glyph_cache[key]
 
         font_index = self.find_font_for_char(char)
-        print(f"[{index}/{all}] - {hex(ord(char))} - {char} - fonts[{font_index}]", end="\r")
+        print(f"[{index}/{all}] - {hex(ord(char))} - {char} - fonts[{font_index}]{' '*50}", end="\r")
         font = self.fonts[font_index]
         surface, _ = font.render(char, color)
 
