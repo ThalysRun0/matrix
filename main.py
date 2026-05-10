@@ -141,11 +141,11 @@ class Dot:
         self.render_color = self.render_color if color is None else color
         _render_color = {0: self.render_color[0], 1: self.render_color[1], 2: self.render_color[2]}
         if self.render_color[0] > self.color[0]:
-            _render_color[0] = max(0, self.render_color[0] - (255 - self.intensity))
+            _render_color[0] = max(0, (self.render_color[0] - (255 - self.intensity) )) # // (self.speed / 2)))
         if self.render_color[1] > self.color[1]:
-            _render_color[1] = max(0, self.render_color[1] - (255 - self.intensity))
+            _render_color[1] = max(0, (self.render_color[1] - (255 - self.intensity) )) # // (self.speed / 2)))
         if self.render_color[2] > self.color[2]:
-            _render_color[2] = max(0, self.render_color[2] - (255 - self.intensity))
+            _render_color[2] = max(0, (self.render_color[2] - (255 - self.intensity) )) # // (self.speed / 2)))
         self.render_color = (_render_color[0], _render_color[1], _render_color[2])
         _color = (*self.render_color, self.intensity)
         self.surface = renderer.render_char(self.glyph, _color).copy()
@@ -231,7 +231,6 @@ for x in x_positions:
     for y in y_positions:
         key = (x, y)
         dots[key] = Dot(key, x, y, glyph="1", color=(0, 255, 0), intensity=0)
-
 
 #%%
 print(f"Generate and Cache Glyphs len({len(GLYPHS)})")

@@ -63,6 +63,7 @@ class MultiFontRenderer:
         surface, _ = font.render(char, color)
 
         self.glyph_cache[key] = surface
+        pygame.event.get()
         return surface
 
     def render_text(self, text):
