@@ -116,7 +116,7 @@ class Dot:
         self.intensity = 255 if intensity is None else intensity
         self.fade_duration = 1.8
         self.fade_elapsed = 0.0
-        self.switch_duration = 3.0
+        self.switch_duration = 1.0
         self.switch_elapsed = 0.0
 
         self.render(color=self.head_color)
@@ -141,7 +141,8 @@ class Dot:
         progress = min(self.fade_elapsed / self.fade_duration, 1.0)
         self.intensity = int(255 * (1.0 - progress))
 
-        if self.switch_elapsed >= random.uniform(self.switch_duration, self.switch_duration * self.speed):
+        if self.switch_elapsed >= random.randint(self.switch_duration, self.switch_duration + 1.0):
+        # if self.switch_elapsed >= self.switch_duration:
             self.glyph = random.choice(GLYPHS)
             self.switch_elapsed = 0.0
 
