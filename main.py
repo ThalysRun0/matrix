@@ -25,6 +25,7 @@ BUFFER_SIZE = 1000
 GLYPHS = (
     # glyphes.languages["hiragana"] + 
     # glyphes.languages["ascii"] + 
+    glyphes.languages["digits"] +
     glyphes.languages["katakana"] + 
     # glyphes.languages["korean"] +
     # glyphes.languages["arabic"] +
@@ -32,16 +33,23 @@ GLYPHS = (
     # glyphes.languages["hebrew"] +
     # glyphes.languages["ascii"] + 
     glyphes.languages["symbols"] +
-    glyphes.languages["digits"] +
     glyphes.languages["ascii"]
 )
 
 #%%
-
+BLUR = True
+BLUR_SCALE_ALPHA = [
+            (0.5, 240),
+            (1.0, 180),
+            (1.5, 120),
+            (2.0, 60),
+            ]
 MAX_FLOW_LENGTH = 30
-# SCREEN_WIDTH = 350 # 800
-SCREEN_WIDTH = 1920 // 5
-SCREEN_HEIGHT = (1080 // 3) * 2 
+SCREEN_HEIGHT = (1080 // 5) * 4
+# SCREEN_HEIGHT = 550 # 800
+# SCREEN_HEIGHT = 1080
+SCREEN_WIDTH = (1920 // 5) * 2
+# SCREEN_WIDTH = 1920
 FONT_SIZE = 18
 GRID_SEP = 1
 
@@ -105,6 +113,7 @@ lock = threading.Lock()
 class Dot:
     def __init__(self, key, x: int, y: int, glyph: str | None = None, speed: float | None = None, color: tuple[int, int, int] | None = None, intensity: int | None = None):
         self.surface: pygame.Surface = None
+        self.glow_surface: pygame.Surface = None
         self.key = key
         self.x = x
         self.y = y
@@ -114,10 +123,11 @@ class Dot:
         self.head_color = (255, 255, 255)
         self.render_color = self.head_color
         self.intensity = 255 if intensity is None else intensity
-        self.fade_duration = 1.8
+        self.fade_duration = 1.0
         self.fade_elapsed = 0.0
-        self.switch_duration = 1.0
+        self.switch_duration = 2.0
         self.switch_elapsed = 0.0
+        self.scale_alpha = BLUR_SCALE_ALPHA
 
         self.render(color=self.head_color)
 
@@ -141,8 +151,8 @@ class Dot:
         progress = min(self.fade_elapsed / self.fade_duration, 1.0)
         self.intensity = int(255 * (1.0 - progress))
 
-        if self.switch_elapsed >= random.randint(self.switch_duration, self.switch_duration + 1.0):
         # if self.switch_elapsed >= self.switch_duration:
+        if self.switch_elapsed >= random.randint(self.switch_duration, self.switch_duration + 1.0):
             self.glyph = random.choice(GLYPHS)
             self.switch_elapsed = 0.0
 
@@ -163,6 +173,14 @@ class Dot:
         _tint = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
         _tint.fill(_color)
         self.surface.blit(_tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        if BLUR:
+            self.glow_surface = self.surface.copy()
+            for scale, alpha in self.scale_alpha:
+                _glow = self.surface.copy()
+                _glow.set_alpha(alpha)
+                w, h = _glow.get_size()
+                _glow_glyph = pygame.transform.scale(_glow, (int(w*scale), int(h*scale)))
+                self.glow_surface.blit(_glow_glyph, ((_glow_glyph.get_width() - w)//2, (_glow_glyph.get_height() - h)//2))
 
 
 #%%
@@ -187,7 +205,9 @@ class Flow:
 
         self.raise_destroy_event = False
         self.length = length
-        self.speed = scale_value(self.length // 2, (min(random.randint(50, 100), self.length // 2), max(self.length, 200)), (0.01, 1.5)) if speed is None else speed
+        # self.speed = scale_value(self.length // 2, (min(random.randint(50, 100), self.length // 2), max(self.length, 200)), (0.01, 1.5)) if speed is None else speed
+        # self.speed = scale_value(self.length, (min(random.randint(50, 100), self.length), max(self.length, 200)), (0.01, 1.5)) if speed is None else speed
+        self.speed = scale_value(self.length, (min(random.randint(50, 250), self.length), max(self.length, 500)), (0.01, 1.5)) if speed is None else speed
         self.y_iter = iter(y_positions)
         self.y = next(self.y_iter)
         self.x = get_column() if x is None else x
@@ -195,8 +215,8 @@ class Flow:
         self.glyphs = [random.choice(GLYPHS) for _ in range(self.length)] if text is None else [*text]
         self.color = color
         self.spawn_time = time.time()
-        self.switch_duration = self.speed
-        self.elapsed = 0.0
+        self.switch_duration = self.speed / 3
+        self.elapsed: float = 0.0
 
     def update(self, dt):
         self.elapsed += dt
@@ -241,9 +261,13 @@ for x in x_positions:
         dots[key] = Dot(key, x, y, glyph="1", color=(0, 255, 0), intensity=0)
 
 #%%
-print(f"Generate and Cache Glyphs len({len(GLYPHS)})")
-renderer.render_text(GLYPHS) # on charge en cache la totalité des glyphs avant de lancer le screen
-print(f"Let's Go !{' '*50}")
+def render_glyphs():
+    print(f"Generate and Cache Glyphs len({len(GLYPHS)})")
+    renderer.render_text(GLYPHS) # on charge en cache la totalité des glyphs avant de lancer le screen
+    print(f"Let's Go !{' '*50}")
+
+render_glyphs()
+
 
 #%%
 # ======================
@@ -281,7 +305,8 @@ def aggregator():
 # ======================
 # NETWORK CAPTURE
 # ======================
-def stdin_reader():
+def stdin_reader(delay: float=0.0):
+    time.sleep(delay)
     for line in sys.stdin:
         m = None
         protocole = ""
@@ -310,10 +335,14 @@ def stdin_reader():
 
 #%%
 def render():
+    if BLUR:
+        glow_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     PAUSED = False
     running = True
     while running:
 
+        if BLUR:
+            glow_surface.fill((0, 0, 0, 25)) #, special_flags=pygame.BLEND_RGBA_SUB)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_KP_PLUS:
@@ -332,13 +361,7 @@ def render():
 
         screen.fill((0, 0, 0))
         # dt = clock.tick(60) / 1000.0 # en secondes
-        dt = pygame.time.Clock().tick(60) / 1000.0 # en secondes
-
-        for x in x_positions:
-            for y in y_positions:
-                current_dot:Dot = dots[(x, y)]
-                current_dot.update(dt)
-                screen.blit(current_dot.surface, (x, y))
+        dt = pygame.time.Clock().tick(90) / 1000.0 # en secondes
 
         with lock:
             _index = 0
@@ -361,6 +384,20 @@ def render():
                     dots[(current_flow.x, current_flow.y)] = flow_dot
                 _index += 1
 
+        for x in x_positions:
+            for y in y_positions:
+                current_dot:Dot = dots[(x, y)]
+                current_dot.update(dt)
+                screen.blit(current_dot.surface, (x, y))
+                if BLUR:
+                    glow_surface.blit(current_dot.glow_surface, (x, y))
+        
+        if BLUR:
+            # downscale → upscale = blur cheap
+            small = pygame.transform.smoothscale(glow_surface, (SCREEN_WIDTH//8, SCREEN_HEIGHT//8))
+            blur = pygame.transform.smoothscale(small, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            screen.blit(blur, (0, 0), special_flags=pygame.BLEND_ADD)
+
 #%%
         if DEBUG:
             if len(flows)>0:
@@ -371,14 +408,12 @@ def render():
 
                 # debug_dot = dots[(debug_flow.x, debug_flow.y)]
                 debug_dot = dots[(x_positions[0], y_positions[0])]
-                surface = renderer.render_text(f"DOT({debug_dot.x}, {debug_dot.y}): '{debug_dot.glyph}' | {debug_dot.intensity}")
+                surface = renderer.render_text(f"DOT({debug_dot.x}, {debug_dot.y}): '{debug_dot.glyph}' | {debug_dot.glow_intensity}")
                 screen.blit(surface, (10, (FONT_SIZE*2)))
 
         pygame.display.flip()
 
     pygame.quit()
-
-#%%
 
 # ======================
 # MAIN
@@ -389,19 +424,21 @@ if __name__ == "__main__":
     # Start aggregator
     threading.Thread(target=aggregator, daemon=True).start()
 
-    # Start capture threads 
-    # sudo tcpdump -l -nn -tt 
-    threading.Thread(target=stdin_reader, daemon=True).start()
 
 #%%
     for x in x_positions:
-        speed, text = (0.01, "0"*len(y_positions))
+        speed, text = (0.001, "0"*len(y_positions))
         # key = (src, dst, int(sport), int(dport), protocole, min(MAX_FLOW_LENGTH, len(line)))
         # key = src, dst, sport, dport, proto, length, x, text, speed
         key = (x, 0, int(0), int(0), "TCP", len(y_positions), x, text, speed)
         if not packet_queue.full():
             packet_queue.put(key, block=False)
 
+
+#%%
+    # Start capture threads 
+    # sudo tcpdump -l -nn -tt 
+    threading.Thread(target=stdin_reader, daemon=True, kwargs={"delay": 7}).start()
 
 #%%
 
